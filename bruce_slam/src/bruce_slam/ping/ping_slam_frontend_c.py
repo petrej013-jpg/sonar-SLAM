@@ -3,10 +3,10 @@ import numpy as np
 import gtsam
 
 from bruce_slam.slam import SLAM
-from bruce_slam.slam_objects import Keyframe
+#from bruce_slam.slam_objects import Keyframe
 
 # The Ping1D driver we wrote previously
-from .ping_manager import PingManager
+from .PingManager_c import PingManager
 
 
 class PingSLAMFrontEnd:

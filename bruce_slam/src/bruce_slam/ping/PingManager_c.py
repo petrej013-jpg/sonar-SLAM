@@ -6,8 +6,8 @@ import numpy as np
 from brping import Ping1D
 from loguru import logger
 
-from .SonarFeatureExtraction import SonarFeatureExtraction
-from settings import WATER_SOS, SonarConfig, CFARConfig
+from .SonarFeatureExtraction_Blue import SonarFeatureExtraction
+from .settings_Blue import WATER_SOS, SonarConfig, CFARConfig
 
 
 class PingManager:

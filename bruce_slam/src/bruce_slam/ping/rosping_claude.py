@@ -5,8 +5,8 @@ from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from scipy.spatial.transform import Rotation
 
-from .ping_manager import PingManager
-from .ping_slam_front_end import PingSLAMFrontEnd
+from .PingManager_c import PingManager
+from .ping_slam_frontend_c import PingSLAMFrontEnd
 from bruce_slam.slam import SLAM
 
 
