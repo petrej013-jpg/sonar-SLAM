@@ -5,10 +5,10 @@ from enum import Enum
 import gtsam
 import numpy as np
 
-from .sonar import OculusProperty
-from .utils.conversions import *
-from .utils.visualization import *
-from .utils.io import *
+
+from ..utils.conversions import *
+from ..utils.visualization import *
+from ..utils.io import *
 
 
 class STATUS(Enum):

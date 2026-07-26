@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Tuple, Optional
 from loguru import logger
 
-from .CFAR import CFAR
+from ..sonar.CFAR import CFAR
 
 
 class SonarFeatureExtraction:

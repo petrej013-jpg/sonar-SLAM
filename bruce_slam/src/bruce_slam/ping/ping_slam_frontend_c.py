@@ -2,7 +2,7 @@ import time
 import numpy as np
 import gtsam
 
-from bruce_slam.slam import SLAM
+from bruce_slam.slam.slam import SLAM
 #from bruce_slam.slam_objects import Keyframe
 
 # The Ping1D driver we wrote previously

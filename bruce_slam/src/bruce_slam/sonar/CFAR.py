@@ -2,9 +2,8 @@ import math
 import numpy as np
 from scipy.optimize import root
 
-from .utils import * 
-from .sonar import *
-from . import cfar
+from ..utils import * 
+from .. import cfar
 
 class CFAR(object):
     """

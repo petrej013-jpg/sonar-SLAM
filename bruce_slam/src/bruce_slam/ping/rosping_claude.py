@@ -7,7 +7,7 @@ from scipy.spatial.transform import Rotation
 
 from .PingManager_c import PingManager
 from .ping_slam_frontend_c import PingSLAMFrontEnd
-from bruce_slam.slam import SLAM
+from bruce_slam.slam.slam import SLAM
 
 
 class RosPingSLAMFrontEnd(PingSLAMFrontEnd, Node):

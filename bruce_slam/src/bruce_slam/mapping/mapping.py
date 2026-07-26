@@ -3,9 +3,9 @@ import cv2
 from scipy.special import logit, expit
 from nav_msgs.msg import OccupancyGrid
 
-from .sonar import *
-from .utils.conversions import *
-from . import pcl
+from ..sonar import *
+from ..utils.conversions import *
+from .. import pcl
 
 
 class Submap(object):

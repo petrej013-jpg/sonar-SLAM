@@ -10,13 +10,12 @@ from collections import defaultdict
 from sklearn.covariance import MinCovDet
 import time as time_pkg
 
-from .sonar import OculusProperty
-from .utils.conversions import *
-from .utils.visualization import *
-from .utils.io import *
-from . import pcl
+from ..utils.conversions import *
+from ..utils.visualization import *
+from ..utils.io import *
+from .. import pcl
 
-from bruce_slam.slam_objects import (
+from .slam_objects import (
     STATUS,
     Keyframe,
     InitializationResult,
