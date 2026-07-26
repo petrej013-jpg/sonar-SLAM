@@ -8,7 +8,7 @@ from ..utils.conversions import *
 from .. import pcl
 
 
-class Submap(object):
+class Submap(object): #Keyframe storage keeping pose, coordinates, and map values (logodds) used for ICP
     def __init__(self):
         # index
         self.k = 0
@@ -58,10 +58,10 @@ class Mapping(object):
         self.rows = None
         self.cols = None
 
-        self.oculus = OculusProperty()
-        self.oculus_image_size = None
-        self.oculus_r_skip = None
-        self.oculus_c_skip = None
+        #self.oculus = OculusProperty()
+        #self.oculus_image_size = None
+        #self.oculus_r_skip = None
+        #self.oculus_c_skip = None
 
         # Accumulative intensity at grid cell
         self.intensity_grid = None
@@ -142,114 +142,37 @@ class Mapping(object):
 
         return dt > self.min_translation or dr > self.min_rotation
 
-    def add_keyframe(self, key, pose, ping, points):
-        changed = self.oculus.configure(ping)
-
+    def add_keyframe(self, key, pose, local_points):
+        """
+        local_points: Nx2 array of (x, y) hit points in the vehicle/sensor
+        frame for this keyframe — same points ping_slam_frontend_c.py
+        accumulates before handing a keyframe to SLAM.
+        """
         keyframe = Submap()
         keyframe.k = len(self.keyframes)
         keyframe.pose = pose
 
-        if changed:
-            # Downsample raw image
-            self.oculus_r_skip = max(
-                1, np.int32(np.floor(self.resolution / self.oculus.range_resolution))
-            )
-            range_resolution = self.oculus.angular_resolution * self.oculus.max_range
-            self.oculus_c_skip = max(
-                1, np.int32(np.floor(self.resolution / range_resolution))
-            )
-
-            B, R = np.meshgrid(
-                self.oculus.bearings[:: self.oculus_c_skip],
-                self.oculus.ranges[:: self.oculus_r_skip],
-            )
-            X, Y = np.cos(B) * R, np.sin(B) * R
-            keyframe.sonar_xy = np.c_[X.ravel(), Y.ravel()].astype(np.float32)
-            self.oculus_image_size = X.shape
-
         if self.pub_occupancy1:
-            # mask = np.zeros(self.oculus_image_size, np.uint8)
-            mask = np.zeros(self.oculus_image_size, np.float32)
+            # Build a local occupancy patch big enough to hold the max range
+            # in every direction, at grid resolution
+            half = int(np.ceil(self.ping_max_range / self.resolution))
+            size = 2 * half + 1
+            mask = np.zeros((size, size), np.float32)
+            origin = np.array([half, half])
 
-            if len(points):
+            for x, y in local_points:
+                hit_cell = origin + np.int32(np.round([y, x]) / self.resolution)
+                if not (0 <= hit_cell[0] < size and 0 <= hit_cell[1] < size):
+                    continue
+                # Ray cast from sensor origin to the hit, marking free space
+                line_mask = np.zeros_like(mask, np.uint8)
+                cv2.line(line_mask, tuple(origin[::-1]), tuple(hit_cell[::-1]), 1, 1)
+                r_idx, c_idx = np.nonzero(line_mask)
+                mask[r_idx, c_idx] = self.miss_prob
+                mask[hit_cell[0], hit_cell[1]] = self.hit_prob
 
-                if self.outlier_filter_min_points > 1:
-                    points = pcl.remove_outlier(
-                        points[:, :2],
-                        self.outlier_filter_radius,
-                        self.outlier_filter_min_points,
-                    )
-
-                c = self.oculus.b2c(np.arctan2(points[:, 1], points[:, 0]))
-                c = np.clip(np.int32(np.round(c)), 0, self.oculus.num_bearings - 1)
-                r = self.oculus.ra2ro(np.linalg.norm(points[:, :2], axis=1))
-                r = np.clip(np.int32(np.round(r)), 0, self.oculus.num_ranges - 1)
-                mask[r // self.oculus_r_skip, c // self.oculus_c_skip] = 1.0
-
-                hc = int(
-                    round(
-                        self.inflation_angle
-                        / self.oculus.angular_resolution
-                        / self.oculus_c_skip
-                    )
-                )
-                hr = int(
-                    round(
-                        self.inflation_range
-                        / self.oculus.range_resolution
-                        / self.oculus_r_skip
-                    )
-                )
-
-                # kernel = cv2.getStructuringElement(
-                #     cv2.MORPH_ELLIPSE, (hc * 2 + 1, hr * 2 + 1), (hc, hr)
-                # )
-                # mask = cv2.dilate(mask, kernel)
-
-                kernel_r = cv2.getGaussianKernel(2 * hr + 1, -1)
-                kernel_c = cv2.getGaussianKernel(2 * hc + 1, -1)
-                kernel = kernel_r.dot(kernel_c.T)
-                mask = cv2.filter2D(
-                    mask, cv2.CV_32F, kernel, None, None, 0.0, cv2.BORDER_CONSTANT
-                )
-                mask /= kernel[hr, hc] / self.hit_prob
-                mask = np.clip(mask, 0.5, self.hit_prob)
-
-                # Only mark points before the first hit as miss
-                first_hits = np.argmax(mask > 0.5, axis=0)
-                # Mark all as miss if there is no hit
-                first_hits[first_hits == 0] = mask.shape[0]
-                for j in range(mask.shape[1]):
-                    mask[: first_hits[j], j] = self.miss_prob
-            else:
-                mask += self.miss_prob
-
-            logodds = logit(mask)
-            keyframe.logodds = logodds.ravel().astype(np.float32)
-
-            #############################################
-            # Save some images for plotting
-            #############################################
-            if self.save_fig:
-                keyframe.cimg = r2n(ping)
-                keyframe.limg = logodds
-            #############################################
-
-        if self.pub_occupancy2:
-            self.point_cloud = points
-
-        if self.pub_intensity:
-            intensity = r2n(ping.ping)[::r_skip, ::c_skip]
-            keyframe.intensity = intensity.ravel()
-
-        self.fit_grid(keyframe)
-        self.inc_grid(keyframe)
-
-        # In case we miss one keyframe
-        while len(self.keyframes) < key:
-            self.keyframes.append(None)
-
-        self.keyframes.append(keyframe)
+            keyframe.sonar_xy = self._patch_to_local_xy(size, origin)  # grid->local xy for fit_grid
+            keyframe.logodds = logit(mask.ravel())
 
     def update_pose(self, key, new_pose):
         assert key < len(self.keyframes)
