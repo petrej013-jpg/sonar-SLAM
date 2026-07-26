@@ -58,6 +58,8 @@ class Mapping(object):
         self.rows = None
         self.cols = None
 
+
+        self.ping_max_range = 100 #meters  # set from your Ping1D config before configure()/add_keyframe() run
         #self.oculus = OculusProperty()
         #self.oculus_image_size = None
         #self.oculus_r_skip = None
@@ -143,18 +145,11 @@ class Mapping(object):
         return dt > self.min_translation or dr > self.min_rotation
 
     def add_keyframe(self, key, pose, local_points):
-        """
-        local_points: Nx2 array of (x, y) hit points in the vehicle/sensor
-        frame for this keyframe — same points ping_slam_frontend_c.py
-        accumulates before handing a keyframe to SLAM.
-        """
         keyframe = Submap()
         keyframe.k = len(self.keyframes)
         keyframe.pose = pose
 
         if self.pub_occupancy1:
-            # Build a local occupancy patch big enough to hold the max range
-            # in every direction, at grid resolution
             half = int(np.ceil(self.ping_max_range / self.resolution))
             size = 2 * half + 1
             mask = np.zeros((size, size), np.float32)
@@ -164,16 +159,39 @@ class Mapping(object):
                 hit_cell = origin + np.int32(np.round([y, x]) / self.resolution)
                 if not (0 <= hit_cell[0] < size and 0 <= hit_cell[1] < size):
                     continue
-                # Ray cast from sensor origin to the hit, marking free space
-                line_mask = np.zeros_like(mask, np.uint8)
+                line_mask = np.zeros((size, size), np.uint8)
                 cv2.line(line_mask, tuple(origin[::-1]), tuple(hit_cell[::-1]), 1, 1)
                 r_idx, c_idx = np.nonzero(line_mask)
                 mask[r_idx, c_idx] = self.miss_prob
                 mask[hit_cell[0], hit_cell[1]] = self.hit_prob
 
-            keyframe.sonar_xy = self._patch_to_local_xy(size, origin)  # grid->local xy for fit_grid
-            keyframe.logodds = logit(mask.ravel())
+            # Only keep cells an actual ray touched — untouched cells are
+            # "unknown", not "definitely free", and logit(0) = -inf would
+            # poison the map if we kept them.
+            touched = mask > 0
+            patch_xy = self._patch_to_local_xy(size, origin)
+            keyframe.sonar_xy = patch_xy[touched.ravel()]
+            keyframe.logodds = logit(mask.ravel()[touched.ravel()]).astype(np.float32)
 
+        if self.pub_occupancy2:
+            self.point_cloud = local_points
+
+        self.fit_grid(keyframe)
+        self.inc_grid(keyframe)
+
+        while len(self.keyframes) < key:
+            self.keyframes.append(None)
+        self.keyframes.append(keyframe)
+
+        return keyframe
+
+    def _patch_to_local_xy(self, size, origin):
+        rows, cols = np.mgrid[0:size, 0:size]
+        x = (cols - origin[1]) * self.resolution
+        y = (rows - origin[0]) * self.resolution
+        return np.c_[x.ravel(), y.ravel()].astype(np.float32)
+
+    
     def update_pose(self, key, new_pose):
         assert key < len(self.keyframes)
         keyframe = self.keyframes[key]
