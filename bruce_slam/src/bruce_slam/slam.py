@@ -33,9 +33,14 @@ class SLAM(object):
         we use the ros param system to get the params. Note that almost everything is eligible for
         overwrite when the yaml file is called. See config/slam.yaml."""
 
-        # configure sonar info
-        self.oculus = OculusProperty()
+        # Before
+        #self.oculus = OculusProperty()
 
+        # After
+        # Ping1D has no field-of-view/aperture concept - it's one fixed beam
+        # direction, not a cone. We only ever needed max_range from OculusProperty
+        # for the FOV gating below, so a plain attribute replaces the whole object.
+        self.ping_max_range = None  # set from config, e.g. Ping1D's configured scan range
         # Create a new factor when
         # - |ti - tj| > min_duration and
         # - |xi - xj| > max_translation or
@@ -882,16 +887,28 @@ class SLAM(object):
             cov = self.keyframes[source_frame].cov
 
             # parse the covariance
+            ###translation_std = np.sqrt(np.max(np.linalg.eigvals(cov[:2, :2])))
+            ###rotation_std = np.sqrt(cov[2, 2])
+            ###range_bound = translation_std * 5.0 + self.oculus.max_range
+            ###bearing_bound = rotation_std * 5.0 + self.oculus.horizontal_aperture * 0.5
+###
+            #### figure out the uncertain points
+            ###local_points = Keyframe.transform_points(target_points, pose.inverse())
+            ###ranges = np.linalg.norm(local_points, axis=1)
+            ###bearings = np.arctan2(local_points[:, 1], local_points[:, 0])
+            ###sel_i = (ranges < range_bound) & (abs(bearings) < bearing_bound)
+            ###sel |= sel_i
+            # After
             translation_std = np.sqrt(np.max(np.linalg.eigvals(cov[:2, :2])))
-            rotation_std = np.sqrt(cov[2, 2])
-            range_bound = translation_std * 5.0 + self.oculus.max_range
-            bearing_bound = rotation_std * 5.0 + self.oculus.horizontal_aperture * 0.5
+            range_bound = translation_std * 5.0 + self.ping_max_range
 
-            # figure out the uncertain points
             local_points = Keyframe.transform_points(target_points, pose.inverse())
             ranges = np.linalg.norm(local_points, axis=1)
-            bearings = np.arctan2(local_points[:, 1], local_points[:, 0])
-            sel_i = (ranges < range_bound) & (abs(bearings) < bearing_bound)
+            # No bearing gate: with Ping1D, each point's direction already reflects
+            # where the vehicle was actually pointed when it was measured (baked in
+            # by PingSLAMFrontEnd), so there's no separate "was this inside the
+            # sensor's cone" question left to ask - it's range-only visibility now.
+            sel_i = ranges < range_bound
             sel |= sel_i
 
         # only keep the certain points
