@@ -4,6 +4,7 @@ from typing import Optional
 
 from nav_msgs.msg import Odometry
 from scipy.spatial.transform import Rotation
+from ..utils.topics import MAVROS_ODOM_TOPIC
 
 
 @dataclass
@@ -44,7 +45,7 @@ class MavrosOdometryCache:
     reading and skip that ping rather than feed SLAM a frozen pose.
     """
 
-    def __init__(self, node, topic: str = "/mavros/local_position/odom", max_age_s: float = 0.5):
+    def __init__(self, node, topic: str = MAVROS_ODOM_TOPIC, max_age_s: float = 0.5):
         """
         Args:
             node: the rclpy Node to attach this subscription to
