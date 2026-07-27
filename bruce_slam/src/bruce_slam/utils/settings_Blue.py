@@ -33,18 +33,24 @@ LIVE_SONAR = False  # Whether to use live sonar or recordings
 
 # Physical properties
 # ------------------
-WATER_SOS = 1481  # Speed of sound in water (m/s)
+WATER_SOS = 1500  # Speed of sound in water (m/s)
 
 # Sonar configuration
 # ------------------
 
 
 class SonarConfig:
-    """Configuration for the Ping360 sonar."""
-    TRANSMIT_DURATION = 25  # Transmit duration in μs
-    SAMPLE_PERIOD = 480  # Sample period in ns/25
-    TRANSMIT_FREQUENCY = 750  # Transmit frequency in kHz
-    MIN_RANGE = 0.75  # Minimum operating range in meters
+    """
+    Configuration for the Blue Robotics Ping2 single-beam echosounder
+    (bluerobotics.com/store/sonars/echosounders/ping-sonar-r2-rp).
+    """
+    TRANSMIT_FREQUENCY_KHZ = 115  # Transducer frequency (kHz)
+    BEAMWIDTH_DEG = 25  # Measurement beamwidth (degrees)
+    PROFILE_POINTS = 200  # Fixed number of signal-strength samples per profile,
+                           # regardless of configured scan range (per Ping2 manual)
+    MAX_RANGE = 100  # Max measurement range in meters
+                      
+    MIN_RANGE = 0.3  # Minimum operating range in meters
 
 # CFAR detector configuration
 # --------------------------

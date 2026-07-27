@@ -6,8 +6,8 @@ import numpy as np
 from brping import Ping1D
 from loguru import logger
 
-from .SonarFeatureExtraction_Blue import SonarFeatureExtraction
-from .settings_Blue import WATER_SOS, SonarConfig, CFARConfig
+from ..utils.SonarFeatureExtraction_Blue import SonarFeatureExtraction
+from ..utils.settings_Blue import WATER_SOS, SonarConfig, CFARConfig
 
 
 class PingManager:
@@ -55,7 +55,7 @@ class PingManager:
         # resolution directly from each profile message instead (see
         # get_ping_data()), since Ping1D profiles can vary in scan length
         # and point count from ping to ping.
-        self.resolution = (WATER_SOS * SonarConfig.SAMPLE_PERIOD * 25e-9) / 2
+        self.resolution = SonarConfig.MAX_RANGE / SonarConfig.PROFILE_POINTS ####Adjust the Max Range for real working range###########
 
         # Initialize for live or replay mode
         if live:
@@ -283,7 +283,7 @@ class PingManager:
         res = resolution if resolution else self.resolution
 
         index = 0
-        while index < len(data) and index * res < 0.75:
+        while index < len(data) and index * res < SonarConfig.MIN_RANGE:
             data[index] = 0
             index += 1
 

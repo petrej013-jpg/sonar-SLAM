@@ -4,6 +4,7 @@ from scipy.special import logit, expit
 from nav_msgs.msg import OccupancyGrid
 
 from ..sonar import *
+from ..utils.settings_Blue import SonarConfig
 from ..utils.conversions import *
 from .. import pcl
 
@@ -59,7 +60,7 @@ class Mapping(object):
         self.cols = None
 
 
-        self.ping_max_range = 100 #meters  # set from your Ping1D config before configure()/add_keyframe() run
+        self.ping_max_range = SonarConfig.MAX_RANGE #meters  # set from your Ping1D config before configure()/add_keyframe() run
         #self.oculus = OculusProperty()
         #self.oculus_image_size = None
         #self.oculus_r_skip = None

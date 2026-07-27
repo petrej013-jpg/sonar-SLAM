@@ -13,6 +13,7 @@ import time as time_pkg
 from ..utils.conversions import *
 from ..utils.visualization import *
 from ..utils.io import *
+from ..utils.settings_Blue import SonarConfig
 from .. import pcl
 
 from .slam_objects import (
@@ -39,7 +40,7 @@ class SLAM(object):
         # Ping1D has no field-of-view/aperture concept - it's one fixed beam
         # direction, not a cone. We only ever needed max_range from OculusProperty
         # for the FOV gating below, so a plain attribute replaces the whole object.
-        self.ping_max_range = None  # set from config, e.g. Ping1D's configured scan range
+        self.ping_max_range = SonarConfig.MAX_RANGE  # set from config, e.g. Ping1D's configured scan range
         # Create a new factor when
         # - |ti - tj| > min_duration and
         # - |xi - xj| > max_translation or
