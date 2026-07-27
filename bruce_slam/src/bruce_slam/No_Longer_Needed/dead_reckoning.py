@@ -33,7 +33,7 @@ class DeadReckoningNode(object):
 		self.prev_vel = None #previous reading velocity
 		self.keyframes = [] #keyframe list
 
-		# Force yaw at origin to be aligned with x axis
+		# Force yaw at origin to be aligned with x axis########################THIS CORRECTS FOR MOUNTING ORIENTATION##############################
 		self.imu_yaw0 = None
 		self.imu_pose = [0, 0, 0, -np.pi / 2, 0, 0]
 		self.imu_rot = None
